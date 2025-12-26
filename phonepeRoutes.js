@@ -103,7 +103,7 @@ router.all('/redirect', async (req, res) => {
     let statusResponse = null;
     
     try {
-      const client = getPhonepeClient();
+      const client = PhonepeClient();
       statusResponse = await client.getOrderStatus(transactionId);
       console.log('📊 Status response:', statusResponse);
       
@@ -245,7 +245,7 @@ router.get('/status/:transactionId', async (req, res) => {
 
     console.log('🔍 Checking status for:', transactionId);
 
-    const client = getPhonepeClient();
+    const client = PhonepeClient();
     const statusResponse = await client.getOrderStatus(transactionId);
 
     console.log('📊 Status response:', statusResponse);
