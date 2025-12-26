@@ -2,8 +2,6 @@ import express from 'express';
 import dotenv from 'dotenv';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import phonepeRoutes from "./phonepeRoutes.js";
-import creditsRoutes from "./creditsRoutes.js";
 import connectDB from "./db.js";
 
 // Load environment variables from backend/.env
@@ -26,6 +24,23 @@ apiApp.use((err, req, res, next) => {
 
 apiApp.use(express.json());
 apiApp.use(express.urlencoded({ extended: true }));
+
+// Lazily load and mount routes to avoid startup failure if deps missing
+try {
+  const { default: phonepeRoutes } = await import("./phonepeRoutes.js");
+  apiApp.use("/phonepe", phonepeRoutes);
+  console.log("✅ PhonePe routes mounted");
+} catch (err) {
+  console.error("⚠️ PhonePe routes not mounted:", err?.message || err);
+}
+
+try {
+  const { default: creditsRoutes } = await import("./creditsRoutes.js");
+  apiApp.use("/credits", creditsRoutes);
+  console.log("✅ Credits routes mounted");
+} catch (err) {
+  console.error("⚠️ Credits routes not mounted:", err?.message || err);
+}
 
 // Connect to MongoDB with error handling
 let dbConnected = false;
@@ -59,10 +74,8 @@ apiApp.get('/test', (req, res) => {
 });
 
 // PhonePe routes
-apiApp.use("/phonepe", phonepeRoutes);
 
 // Credits routes
-apiApp.use("/credits", creditsRoutes);
 
 // Health check endpoint
 apiApp.get('/health', (req, res) => {

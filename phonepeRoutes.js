@@ -1,7 +1,7 @@
 import express from 'express';
 import { randomUUID } from 'crypto';
 import { StandardCheckoutPayRequest, MetaInfo } from 'pg-sdk-node';
-import { phonepeClient } from './phonepeClient.js';
+import { getPhonepeClient } from './phonepeClient.js';
 import User from './models/User.js';
 
 const router = express.Router();
@@ -62,8 +62,8 @@ router.post('/initiate', async (req, res) => {
       email
     });
 
-    // Call PhonePe pay() method
-    const response = await phonepeClient.pay(paymentRequest);
+    const client = getPhonepeClient();
+    const response = await client.pay(paymentRequest);
 
     console.log('📥 PhonePe pay() response:', response);
 
@@ -102,8 +102,8 @@ router.all('/redirect', async (req, res) => {
     let statusResponse = null;
     
     try {
-      // Use PhonePe SDK to check the actual status
-      statusResponse = await phonepeClient.getOrderStatus(transactionId);
+      const client = getPhonepeClient();
+      statusResponse = await client.getOrderStatus(transactionId);
       console.log('📊 Status response:', statusResponse);
       
       if (statusResponse && statusResponse.state === 'COMPLETED') {
@@ -156,7 +156,8 @@ router.post('/webhook', async (req, res) => {
     const responseBodyString = JSON.stringify(req.body);
 
     // Validate callback using PhonePe SDK method
-    const callbackResponse = phonepeClient.validateCallback(
+    const client = getPhonepeClient();
+    const callbackResponse = client.validateCallback(
       WEBHOOK_USERNAME,
       WEBHOOK_PASSWORD,
       authorizationHeader,
@@ -243,8 +244,8 @@ router.get('/status/:transactionId', async (req, res) => {
 
     console.log('🔍 Checking status for:', transactionId);
 
-    // Use PhonePe SDK getOrderStatus method
-    const statusResponse = await phonepeClient.getOrderStatus(transactionId);
+    const client = getPhonepeClient();
+    const statusResponse = await client.getOrderStatus(transactionId);
 
     console.log('📊 Status response:', statusResponse);
 
