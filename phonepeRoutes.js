@@ -1,7 +1,6 @@
 import express from 'express';
 import { randomUUID } from 'crypto';
-import pkg from 'pg-sdk-node';
-const { StandardCheckoutPayRequest, MetaInfo } = pkg;
+import { StandardCheckoutPayRequest, MetaInfo } from 'pg-sdk-node';
 import { phonepeClient } from './phonepeClient.js';
 import User from './models/User.js';
 

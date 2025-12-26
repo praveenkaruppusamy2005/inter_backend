@@ -1,8 +1,7 @@
 import dotenv from 'dotenv';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import pkg from 'pg-sdk-node';
-const { StandardCheckoutClient, Env } = pkg;
+import { StandardCheckoutClient, Env } from 'pg-sdk-node';
 
 // Load environment variables from backend/.env
 const __filename = fileURLToPath(import.meta.url);

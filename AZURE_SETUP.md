@@ -40,5 +40,6 @@ PHONEPE_WEBHOOK_PASSWORD=merchant_password
 
 - Check Application Logs in Azure Portal
 - Verify all environment variables are set
-- Ensure `pg-sdk-node` package is installed (not `phonepe-kit`)
+- Ensure `phonepe-pg-sdk-node` package is installed from PhonePe's repository
 - Test locally with `npm run test`
+- If deployment fails, check that the correct PhonePe SDK URL is used in package.json
