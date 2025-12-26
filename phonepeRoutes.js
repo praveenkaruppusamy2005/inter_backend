@@ -9,9 +9,9 @@ const router = express.Router();
 
 const pendingTransactions = new Map();
 
-// Webhook credentials (configure these in .env)
-const WEBHOOK_USERNAME = process.env.PHONEPE_WEBHOOK_USERNAME || 'merchant_username';
-const WEBHOOK_PASSWORD = process.env.PHONEPE_WEBHOOK_PASSWORD || 'merchant_password';
+// Webhook credentials (use PhonePe Client credentials)
+const WEBHOOK_USERNAME = process.env.PHONEPE_CLIENT_ID || process.env.PHONEPE_WEBHOOK_USERNAME;
+const WEBHOOK_PASSWORD = process.env.PHONEPE_CLIENT_SECRET || process.env.PHONEPE_WEBHOOK_PASSWORD;
 
 /**
  * Initiate PhonePe Payment

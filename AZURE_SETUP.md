@@ -23,10 +23,10 @@ BACKEND_URL=https://interview-pro-e3apb5g4g7h9fhf0.centralindia-01.azurewebsites
 NODE_ENV=production
 ```
 
-### Webhook Configuration
+### Webhook Configuration (Use same as PhonePe Client credentials)
 ```
-PHONEPE_WEBHOOK_USERNAME=merchant_username
-PHONEPE_WEBHOOK_PASSWORD=merchant_password
+PHONEPE_WEBHOOK_USERNAME=praveen
+PHONEPE_WEBHOOK_PASSWORD=Praveen0132P
 ```
 
 ## Deployment Steps
