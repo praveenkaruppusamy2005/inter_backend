@@ -1,7 +1,7 @@
 import express from 'express';
 import { randomUUID } from 'crypto';
 import { StandardCheckoutPayRequest, MetaInfo } from 'pg-sdk-node';
-import { getPhonepeClient } from './phonepeClient.js';
+import { PhonepeClient } from './phonepeClient.js';
 import User from './models/User.js';
 
 const router = express.Router();
@@ -47,11 +47,12 @@ router.post('/initiate', async (req, res) => {
       .build();
 
     // Build payment request using StandardCheckoutPayRequest
+    const backendUrl = (process.env.BACKEND_URL || 'http://localhost:60468').replace(/\/$/, '');
     const paymentRequest = StandardCheckoutPayRequest.builder()
       .merchantOrderId(merchantOrderId)
       .amount(amountInPaise)
       .metaInfo(metaInfo)
-      .redirectUrl(`${process.env.BACKEND_URL || 'http://localhost:60468'}/phonepe/redirect?transactionId=${merchantOrderId}`) // Use backend redirect which now redirects to React app
+      .redirectUrl(`${backendUrl}phonepe/redirect?transactionId=${merchantOrderId}`) // Use backend redirect which now redirects to React app
       .expireAfter(3600) // 1 hour expiry
       .message('Pro Plan Upgrade - 1 Hour Access')
       .build();
@@ -62,7 +63,7 @@ router.post('/initiate', async (req, res) => {
       email
     });
 
-    const client = getPhonepeClient();
+    const client = PhonepeClient();
     const response = await client.pay(paymentRequest);
 
     console.log('📥 PhonePe pay() response:', response);
@@ -156,7 +157,7 @@ router.post('/webhook', async (req, res) => {
     const responseBodyString = JSON.stringify(req.body);
 
     // Validate callback using PhonePe SDK method
-    const client = getPhonepeClient();
+    const client = PhonepeClient();
     const callbackResponse = client.validateCallback(
       WEBHOOK_USERNAME,
       WEBHOOK_PASSWORD,
