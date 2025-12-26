@@ -28,11 +28,24 @@ apiApp.use(express.json());
 apiApp.use(express.urlencoded({ extended: true }));
 
 // Connect to MongoDB with error handling
+let dbConnected = false;
 try {
   await connectDB();
+  dbConnected = true;
 } catch (error) {
   console.error('❌ Failed to connect to MongoDB:', error);
-  process.exit(1);
+  console.error('⚠️  Continuing to start server without DB connection for health/debug endpoints');
+  dbConnected = false;
+  setTimeout(async () => {
+    try {
+      console.log('🔁 Retrying MongoDB connection...');
+      await connectDB();
+      dbConnected = true;
+      console.log('✅ MongoDB connected successfully after retry');
+    } catch (retryError) {
+      console.error('❌ Retry failed:', retryError);
+    }
+  }, 10000);
 }
 
 // Simple test endpoint that doesn't require dependencies
@@ -57,7 +70,8 @@ apiApp.get('/health', (req, res) => {
     status: 'ok', 
     service: 'PhonePe Payment API',
     timestamp: new Date().toISOString(),
-    env: process.env.NODE_ENV || 'development'
+    env: process.env.NODE_ENV || 'development',
+    db: dbConnected ? 'connected' : 'not_connected'
   });
 });
 
