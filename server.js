@@ -35,6 +35,16 @@ try {
   process.exit(1);
 }
 
+// Simple test endpoint that doesn't require dependencies
+apiApp.get('/test', (req, res) => {
+  res.json({ 
+    message: 'Server is running!',
+    timestamp: new Date().toISOString(),
+    method: req.method,
+    url: req.url
+  });
+});
+
 // PhonePe routes
 apiApp.use("/phonepe", phonepeRoutes);
 
@@ -48,6 +58,26 @@ apiApp.get('/health', (req, res) => {
     service: 'PhonePe Payment API',
     timestamp: new Date().toISOString(),
     env: process.env.NODE_ENV || 'development'
+  });
+});
+
+// Diagnostic endpoint for troubleshooting
+apiApp.get('/debug', (req, res) => {
+  const envVars = {
+    NODE_ENV: process.env.NODE_ENV || 'not set',
+    PORT: process.env.PORT || 'not set',
+    PHONEPE_CLIENT_ID: process.env.PHONEPE_CLIENT_ID ? 'set' : 'not set',
+    PHONEPE_CLIENT_SECRET: process.env.PHONEPE_CLIENT_SECRET ? 'set' : 'not set',
+    MONGODB_URI: process.env.MONGODB_URI ? 'set' : 'not set',
+    BACKEND_URL: process.env.BACKEND_URL || 'not set'
+  };
+  
+  res.json({
+    status: 'debug',
+    timestamp: new Date().toISOString(),
+    nodeVersion: process.version,
+    environmentVariables: envVars,
+    workingDirectory: process.cwd()
   });
 });
 
