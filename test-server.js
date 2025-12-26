@@ -29,10 +29,10 @@ console.log('  PORT:', process.env.PORT || 'Using default 60468');
 try {
   const pkg = await import('pg-sdk-node');
   console.log('✅ pg-sdk-node loaded successfully');
-  console.log('  Available exports:', Object.keys(pkg.default || pkg));
+  console.log('  Available exports:', Object.keys(pkg));
 } catch (err) {
   console.error('❌ pg-sdk-node failed:', err.message);
-  console.log('💡 Run: npm install pg-sdk-node');
+  console.log('💡 Run: npm install https://phonepe.mycloudrepo.io/public/repositories/phonepe-pg-sdk-node/releases/v2/phonepe-pg-sdk-node-2.0.3.tgz');
 }
 
 // Test 4: MongoDB
