@@ -15,7 +15,7 @@ let PHONEPE_ENV = process.env.PHONEPE_ENV || 'SANDBOX';
 
 let cachedClient = null;
 
-export function getPhonepeClient() {
+export function PhonepeClient() {
   if (cachedClient) return cachedClient;
   PHONEPE_CLIENT_ID = process.env.PHONEPE_CLIENT_ID;
   PHONEPE_CLIENT_SECRET = process.env.PHONEPE_CLIENT_SECRET;
