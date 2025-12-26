@@ -1,6 +1,3 @@
-# Node.js startup file
-nodeProcessCommandLine: "D:\Program Files (x86)\nodejs\node.exe"
-
 # Log settings
 loggingEnabled: true
 logDirectory: iisnode
