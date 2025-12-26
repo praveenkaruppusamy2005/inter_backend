@@ -2,11 +2,12 @@ import mongoose from 'mongoose';
 
 const connectDB = async () => {
   try {
-    const uri = "mongodb+srv://ipraveen982005_db_user:jT2Jwg9Wrzlp3uMS@user.ckoc9vn.mongodb.net/?appName=user" || 'mongodb://127.0.0.1:27017/interview-pro';
+    const uri = process.env.MONGODB_URI || 'mongodb://127.0.0.1:27017/interview-pro';
     await mongoose.connect(uri);
     console.log('MongoDB connected successfully');
   } catch (err) {
     console.error('MongoDB connection error:', err);
+    throw err; // Re-throw to prevent server from starting with failed DB connection
   }
 };
 
