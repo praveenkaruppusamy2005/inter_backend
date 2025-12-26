@@ -1,6 +1,0 @@
-# Log settings
-loggingEnabled: true
-logDirectory: iisnode
-
-# Process settings
-node_env: production

@@ -101,20 +101,14 @@ echo Finished successfully.
 :SelectNodeVersion
 
 IF DEFINED KUDU_SELECT_NODE_VERSION_CMD (
+  :: The following are done only on Windows Azure Websites environment
   call %KUDU_SELECT_NODE_VERSION_CMD% "%DEPLOYMENT_TARGET%" "%DEPLOYMENT_SOURCE%"
   IF !ERRORLEVEL! NEQ 0 goto error
 
-  IF EXIST "%DEPLOYMENT_TARGET%\bin\node.exe" (
-    SET NODE_EXE="%DEPLOYMENT_TARGET%\bin\node.exe"
-  ) ELSE (
-    SET NODE_EXE=node
-  )
-)
-
-IF EXIST "%DEPLOYMENT_TARGET%\bin\npm.cmd" (
-  SET NPM_CMD="%DEPLOYMENT_TARGET%\bin\npm.cmd"
+  :: On Windows Azure Websites environment, NPM_CMD is the absolute path to npm
+  SET NPM_CMD="!NPM_CMD!"
 ) ELSE (
+  :: On other environments, just set the NPM_CMD to the default one
   SET NPM_CMD=npm
+  SET NODE_EXE=node
 )
-
-goto :EOF
