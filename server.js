@@ -31,7 +31,7 @@ apiApp.get('/health', (req, res) => {
   res.json({ status: 'ok', service: 'PhonePe Payment API' });
 });
 
-const PORT = process.env.PORT || 60468; // Changed from 60467 to avoid conflicts
+const PORT = process.env.PORT || 60468; // Azure will provide PORT environment variable
 
 apiApp.listen(PORT, () => {
   console.log(`🚀 PhonePe API server running on http://localhost:${PORT}`);
