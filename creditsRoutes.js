@@ -28,6 +28,28 @@ router.get('/check/:email', async (req, res) => {
     }
 
     const isPro = user.plan === 'pro' && user.proExpiresAt && new Date(user.proExpiresAt) > new Date();
+
+    if (!isPro) {
+      const zeroPaid =
+        (user.paidInterviewCredits || 0) === 0 &&
+        (user.paidChatCredits || 0) === 0;
+      if (zeroPaid) {
+        user = await User.findOneAndUpdate(
+          { email },
+          {
+            $set: {
+              paidInterviewCredits: 2,
+              paidChatCredits: 24,
+              interviewCreditsUsed: user.interviewCreditsUsed || 0,
+              chatCreditsUsed: user.chatCreditsUsed || 0,
+              freeCredits: 0,
+              creditsUsed: user.creditsUsed || 0
+            }
+          },
+          { new: true }
+        );
+      }
+    }
     const chatRemaining = Math.max(0, (user.paidChatCredits || 0) - (user.chatCreditsUsed || 0)) + Math.max(0, (user.freeCredits || 0) - (user.creditsUsed || 0));
     const interviewRemaining = Math.max(0, (user.paidInterviewCredits || 0) - (user.interviewCreditsUsed || 0)) + Math.max(0, (user.freeCredits || 0) - (user.creditsUsed || 0));
     const hasCredits = chatRemaining > 0 || interviewRemaining > 0;
