@@ -19,23 +19,27 @@ router.get('/check/:email', async (req, res) => {
         hasCredits: false,
         freeCredits: 0,
         creditsUsed: 0,
-        isPro: false
+        isPro: false,
+        chatRemaining: 0,
+        interviewRemaining: 0
       });
     }
 
     const isPro = user.plan === 'pro' && user.proExpiresAt && new Date(user.proExpiresAt) > new Date();
-    const totalCredits = (user.freeCredits || 0) + (user.paidCredits || 0);
-    const usedCredits = (user.creditsUsed || 0);
-    const remaining = Math.max(0, totalCredits - usedCredits);
-    const hasCredits = remaining > 0;
+    const chatRemaining = Math.max(0, (user.paidChatCredits || 0) - (user.chatCreditsUsed || 0)) + Math.max(0, (user.freeCredits || 0) - (user.creditsUsed || 0));
+    const interviewRemaining = Math.max(0, (user.paidInterviewCredits || 0) - (user.interviewCreditsUsed || 0)) + Math.max(0, (user.freeCredits || 0) - (user.creditsUsed || 0));
+    const hasCredits = chatRemaining > 0 || interviewRemaining > 0;
 
     return res.json({
       success: true,
       hasCredits,
       freeCredits: user.freeCredits || 0,
-      paidCredits: user.paidCredits || 0,
-      creditsUsed: usedCredits,
-      remainingCredits: remaining,
+      paidChatCredits: user.paidChatCredits || 0,
+      paidInterviewCredits: user.paidInterviewCredits || 0,
+      chatCreditsUsed: user.chatCreditsUsed || 0,
+      interviewCreditsUsed: user.interviewCreditsUsed || 0,
+      chatRemaining,
+      interviewRemaining,
       isPro,
       proExpiresAt: user.proExpiresAt
     });
@@ -73,34 +77,43 @@ router.post('/use', async (req, res) => {
       });
     }
 
-    // Check if user has credits available
-    const remainingCredits = (user.freeCredits || 0) - (user.creditsUsed || 0);
-    
-    if (remainingCredits <= 0) {
-      return res.json({
-        success: false,
-        error: 'No credits available',
-        hasCredits: false,
-        remainingCredits: 0
-      });
+    // Determine remaining by feature
+    const hasPaidChat = Math.max(0, (user.paidChatCredits || 0) - (user.chatCreditsUsed || 0)) > 0;
+    const hasPaidInterview = Math.max(0, (user.paidInterviewCredits || 0) - (user.interviewCreditsUsed || 0)) > 0;
+    const hasFree = Math.max(0, (user.freeCredits || 0) - (user.creditsUsed || 0)) > 0;
+
+    let update = { lastCreditUsedAt: new Date() };
+    if (feature === 'chat') {
+      if (hasPaidChat) {
+        update.$inc = { chatCreditsUsed: 1 };
+      } else if (hasFree) {
+        update.$inc = { creditsUsed: 1 };
+      } else {
+        return res.json({ success: false, error: 'No chat credits available', hasCredits: false, chatRemaining: 0 });
+      }
+    } else if (feature === 'interview') {
+      if (hasPaidInterview) {
+        update.$inc = { interviewCreditsUsed: 1 };
+      } else if (hasFree) {
+        update.$inc = { creditsUsed: 1 };
+      } else {
+        return res.json({ success: false, error: 'No interview credits available', hasCredits: false, interviewRemaining: 0 });
+      }
+    } else {
+      return res.status(400).json({ success: false, error: 'Invalid feature' });
     }
 
-    // Use one credit
-    await User.findOneAndUpdate(
-      { email },
-      {
-        $inc: { creditsUsed: 1 },
-        lastCreditUsedAt: new Date()
-      }
-    );
+    await User.findOneAndUpdate({ email }, update);
 
-    console.log(`✅ Credit used by ${email} for ${feature}. Remaining: ${remainingCredits - 1}`);
+    const chatRemaining = Math.max(0, (user.paidChatCredits || 0) - ((user.chatCreditsUsed || 0) + (update.$inc?.chatCreditsUsed ? 1 : 0))) + Math.max(0, (user.freeCredits || 0) - ((user.creditsUsed || 0) + (update.$inc?.creditsUsed ? 1 : 0)));
+    const interviewRemaining = Math.max(0, (user.paidInterviewCredits || 0) - ((user.interviewCreditsUsed || 0) + (update.$inc?.interviewCreditsUsed ? 1 : 0))) + Math.max(0, (user.freeCredits || 0) - ((user.creditsUsed || 0) + (update.$inc?.creditsUsed ? 1 : 0)));
 
     return res.json({
       success: true,
-      hasCredits: remainingCredits - 1 > 0,
-      remainingCredits: remainingCredits - 1,
-      message: `Credit used successfully. ${remainingCredits - 1} credits remaining.`
+      hasCredits: chatRemaining > 0 || interviewRemaining > 0,
+      chatRemaining,
+      interviewRemaining,
+      message: `Credit used successfully.`
     });
   } catch (error) {
     console.error('❌ Use credit error:', error);
