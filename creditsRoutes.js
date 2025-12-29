@@ -17,7 +17,12 @@ router.get('/check/:email', async (req, res) => {
       // Auto-provision user with free trial credits
       user = await User.create({
         email,
-        freeCredits: 1,
+        // Default: 2 interview credits and 12 chat credits per interview => 24 chat
+        paidInterviewCredits: 2,
+        paidChatCredits: 24,
+        interviewCreditsUsed: 0,
+        chatCreditsUsed: 0,
+        freeCredits: 0,
         creditsUsed: 0
       });
     }
