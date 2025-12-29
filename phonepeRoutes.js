@@ -217,7 +217,6 @@ router.post('/webhook', async (req, res) => {
       const planDetails = transactionData.planDetails;
       let proExpiresAt;
       let updateData = {
-        plan: 'pro',
         $push: {
           transactions: {
             transactionId: merchantOrderId,
@@ -245,6 +244,7 @@ router.post('/webhook', async (req, res) => {
         case 'subscription':
           proExpiresAt = new Date(Date.now() + 5 * 24 * 60 * 60 * 1000);
           updateData.proExpiresAt = proExpiresAt;
+          updateData.plan = 'pro';
           updateData.subscriptionType = 'subscription';
           console.log(`✅ Granting 5-day subscription, expires at:`, proExpiresAt);
           break;
@@ -253,6 +253,7 @@ router.post('/webhook', async (req, res) => {
           // Lifetime access - set expiry to far future
           proExpiresAt = new Date(Date.now() + 100 * 365 * 24 * 60 * 60 * 1000); // 100 years
           updateData.proExpiresAt = proExpiresAt;
+          updateData.plan = 'pro';
           updateData.subscriptionType = 'lifetime';
           console.log(`✅ Granting lifetime access`);
           break;
@@ -314,7 +315,6 @@ router.get('/status/:transactionId', async (req, res) => {
         const planDetails = transactionData.planDetails;
         let proExpiresAt;
         let updateData = {
-          plan: 'pro',
           $push: {
             transactions: {
               transactionId,
@@ -341,6 +341,7 @@ router.get('/status/:transactionId', async (req, res) => {
           case 'subscription':
             proExpiresAt = new Date(Date.now() + 5 * 24 * 60 * 60 * 1000);
             updateData.proExpiresAt = proExpiresAt;
+            updateData.plan = 'pro';
             updateData.subscriptionType = 'subscription';
             console.log(`✅ Status check: Granting 5-day subscription, expires at:`, proExpiresAt);
             break;
@@ -349,6 +350,7 @@ router.get('/status/:transactionId', async (req, res) => {
             // Lifetime access - set expiry to far future
             proExpiresAt = new Date(Date.now() + 100 * 365 * 24 * 60 * 60 * 1000); // 100 years
             updateData.proExpiresAt = proExpiresAt;
+            updateData.plan = 'pro';
             updateData.subscriptionType = 'lifetime';
             console.log(`✅ Status check: Granting lifetime access`);
             break;
