@@ -196,6 +196,32 @@ router.all('/redirect', async (req, res) => {
       }
       redirectUrl = `https://interviewpro-jet.vercel.app/payment-complete?transactionId=${encodeURIComponent(transactionId)}&status=SUCCESS`;
     } else if (status === 'FAILED') {
+      const tx = pendingTransactions.get(transactionId);
+      if (tx) {
+        try {
+          await User.findOneAndUpdate(
+            { email: tx.email },
+            {
+              $push: {
+                transactions: {
+                  transactionId,
+                  amount: tx.amount,
+                  status: 'FAILED',
+                  paymentMethod: 'phonepe',
+                  planType: tx.planDetails?.type,
+                  createdAt: tx.createdAt,
+                  completedAt: new Date()
+                }
+              }
+            },
+            { upsert: true, new: true }
+          );
+          tx.status = 'FAILED';
+          tx.completedAt = new Date();
+        } catch (e) {
+          console.error('❌ Redirect DB failed-write error:', e);
+        }
+      }
       redirectUrl = `https://interviewpro-jet.vercel.app/payment-complete?transactionId=${encodeURIComponent(transactionId)}&status=FAILED`;
     } else {
       redirectUrl = `https://interviewpro-jet.vercel.app/payment-complete?transactionId=${encodeURIComponent(transactionId)}`;
@@ -328,6 +354,27 @@ router.post('/webhook', async (req, res) => {
     } else {
       console.log('❌ Payment not successful:', payload.state);
       transactionData.status = 'FAILED';
+      try {
+        await User.findOneAndUpdate(
+          { email: transactionData.email },
+          {
+            $push: {
+              transactions: {
+                transactionId: merchantOrderId,
+                amount: transactionData.amount,
+                status: 'FAILED',
+                paymentMethod: 'phonepe',
+                planType: transactionData.planDetails?.type,
+                createdAt: transactionData.createdAt,
+                completedAt: new Date()
+              }
+            }
+          },
+          { upsert: true, new: true }
+        );
+      } catch (e) {
+        console.error('❌ Webhook failed-write error:', e);
+      }
       return res.json({ success: false, error: `Payment ${payload.state}` });
     }
   } catch (error) {
@@ -423,6 +470,31 @@ router.get('/status/:transactionId', async (req, res) => {
       });
     } else if (statusResponse && ['FAILED', 'CANCELLED', 'USER_CANCELLED', 'REJECTED'].includes(statusResponse.state?.toUpperCase())) {
       console.log('❌ Payment failed/cancelled. State:', statusResponse.state, 'ErrorCode:', statusResponse.errorCode);
+      const transactionData = pendingTransactions.get(transactionId);
+      if (transactionData) {
+        try {
+          await User.findOneAndUpdate(
+            { email: transactionData.email },
+            {
+              $push: {
+                transactions: {
+                  transactionId,
+                  amount: transactionData.amount,
+                  status: 'FAILED',
+                  paymentMethod: 'phonepe',
+                  planType: transactionData.planDetails?.type,
+                  createdAt: transactionData.createdAt,
+                  completedAt: new Date()
+                }
+              }
+            },
+            { upsert: true, new: true }
+          );
+          transactionData.status = 'FAILED';
+        } catch (e) {
+          console.error('❌ Status failed-write error:', e);
+        }
+      }
       return res.json({
         success: false,
         status: 'PAYMENT_FAILED',
@@ -445,6 +517,54 @@ router.get('/status/:transactionId', async (req, res) => {
       success: false,
       error: error.message
     });
+  }
+});
+
+router.post('/reconcile', async (req, res) => {
+  try {
+    const { email, transactionId } = req.body;
+    if (!email || !transactionId) {
+      return res.status(400).json({ success: false, error: 'email and transactionId required' });
+    }
+    const client = PhonepeClient();
+    const statusResponse = await client.getOrderStatus(transactionId);
+    if (statusResponse && statusResponse.state === 'COMPLETED') {
+      const amount = statusResponse.amount ? Math.round(statusResponse.amount / 100) : undefined;
+      const planType = amount === 999 ? 'subscription' : (amount % 250 === 0 ? 'credits' : undefined);
+      const updateData = {
+        $push: {
+          transactions: {
+            transactionId,
+            amount,
+            status: 'SUCCESS',
+            paymentMethod: 'phonepe',
+            planType,
+            createdAt: new Date(),
+            completedAt: new Date()
+          }
+        }
+      };
+      if (planType === 'subscription') {
+        const proExpiresAt = new Date(Date.now() + 5 * 24 * 60 * 60 * 1000);
+        updateData.proExpiresAt = proExpiresAt;
+        updateData.plan = 'pro';
+        updateData.subscriptionType = 'subscription';
+      } else if (planType === 'credits') {
+        const credits = amount / 250;
+        updateData.$inc = {
+          paidInterviewCredits: credits,
+          paidChatCredits: credits * 12,
+          paidCredits: credits
+        };
+      }
+      await User.findOneAndUpdate({ email }, updateData, { upsert: true, new: true });
+      return res.json({ success: true, status: 'PAYMENT_SUCCESS' });
+    } else {
+      return res.json({ success: false, status: statusResponse?.state || 'UNKNOWN', data: statusResponse });
+    }
+  } catch (error) {
+    console.error('❌ Reconcile error:', error);
+    return res.status(500).json({ success: false, error: error.message });
   }
 });
 
