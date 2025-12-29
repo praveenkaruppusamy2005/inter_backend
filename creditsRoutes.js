@@ -24,14 +24,18 @@ router.get('/check/:email', async (req, res) => {
     }
 
     const isPro = user.plan === 'pro' && user.proExpiresAt && new Date(user.proExpiresAt) > new Date();
-    const hasCredits = (user.freeCredits || 0) > (user.creditsUsed || 0);
+    const totalCredits = (user.freeCredits || 0) + (user.paidCredits || 0);
+    const usedCredits = (user.creditsUsed || 0);
+    const remaining = Math.max(0, totalCredits - usedCredits);
+    const hasCredits = remaining > 0;
 
     return res.json({
       success: true,
       hasCredits,
       freeCredits: user.freeCredits || 0,
-      creditsUsed: user.creditsUsed || 0,
-      remainingCredits: (user.freeCredits || 0) - (user.creditsUsed || 0),
+      paidCredits: user.paidCredits || 0,
+      creditsUsed: usedCredits,
+      remainingCredits: remaining,
       isPro,
       proExpiresAt: user.proExpiresAt
     });

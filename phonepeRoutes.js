@@ -38,15 +38,17 @@ router.post('/initiate', async (req, res) => {
         planDetails = { type: 'credits', credits, amount: finalAmount };
         break;
       case 'subscription':
-        finalAmount = 1000; // Fixed price for 10-day subscription
-        description = `10-Day Subscription - ₹${finalAmount}`;
-        planDetails = { type: 'subscription', duration: 10, amount: finalAmount };
+        finalAmount = amount || 999; // Allow override for testing
+        description = `5-Day Subscription - ₹${finalAmount}`;
+        planDetails = { type: 'subscription', duration: 5, amount: finalAmount };
         break;
+      /*
       case 'lifetime':
         finalAmount = 5000; // Fixed price for lifetime
         description = `Lifetime Access - ₹${finalAmount}`;
         planDetails = { type: 'lifetime', amount: finalAmount };
         break;
+      */
       default:
         return res.status(400).json({ success: false, error: 'Invalid plan type' });
     }
@@ -233,16 +235,16 @@ router.post('/webhook', async (req, res) => {
       switch (planDetails.type) {
         case 'credits':
           // Credits don't have expiry, just add credits to user account
-          updateData.credits = { $inc: planDetails.credits };
+          updateData.$inc = { paidCredits: planDetails.credits };
           console.log(`✅ Adding ${planDetails.credits} credits to user account`);
           break;
         case 'subscription':
-          // 10-day subscription
-          proExpiresAt = new Date(Date.now() + 10 * 24 * 60 * 60 * 1000);
+          proExpiresAt = new Date(Date.now() + 5 * 24 * 60 * 60 * 1000);
           updateData.proExpiresAt = proExpiresAt;
           updateData.subscriptionType = 'subscription';
-          console.log(`✅ Granting 10-day subscription, expires at:`, proExpiresAt);
+          console.log(`✅ Granting 5-day subscription, expires at:`, proExpiresAt);
           break;
+        /*
         case 'lifetime':
           // Lifetime access - set expiry to far future
           proExpiresAt = new Date(Date.now() + 100 * 365 * 24 * 60 * 60 * 1000); // 100 years
@@ -250,6 +252,7 @@ router.post('/webhook', async (req, res) => {
           updateData.subscriptionType = 'lifetime';
           console.log(`✅ Granting lifetime access`);
           break;
+        */
         default:
           console.error('❌ Unknown plan type:', planDetails.type);
           return res.status(400).json({ success: false, error: 'Unknown plan type' });
@@ -325,16 +328,16 @@ router.get('/status/:transactionId', async (req, res) => {
         switch (planDetails.type) {
           case 'credits':
             // Credits don't have expiry, just add credits to user account
-            updateData.credits = { $inc: planDetails.credits };
+            updateData.$inc = { paidCredits: planDetails.credits };
             console.log(`✅ Status check: Adding ${planDetails.credits} credits to user account`);
             break;
           case 'subscription':
-            // 10-day subscription
-            proExpiresAt = new Date(Date.now() + 10 * 24 * 60 * 60 * 1000);
+            proExpiresAt = new Date(Date.now() + 5 * 24 * 60 * 60 * 1000);
             updateData.proExpiresAt = proExpiresAt;
             updateData.subscriptionType = 'subscription';
-            console.log(`✅ Status check: Granting 10-day subscription, expires at:`, proExpiresAt);
+            console.log(`✅ Status check: Granting 5-day subscription, expires at:`, proExpiresAt);
             break;
+          /*
           case 'lifetime':
             // Lifetime access - set expiry to far future
             proExpiresAt = new Date(Date.now() + 100 * 365 * 24 * 60 * 60 * 1000); // 100 years
@@ -342,6 +345,7 @@ router.get('/status/:transactionId', async (req, res) => {
             updateData.subscriptionType = 'lifetime';
             console.log(`✅ Status check: Granting lifetime access`);
             break;
+          */
           default:
             console.error('❌ Unknown plan type:', planDetails.type);
             return res.status(400).json({ success: false, error: 'Unknown plan type' });
@@ -352,13 +356,7 @@ router.get('/status/:transactionId', async (req, res) => {
           updateData,
           { upsert: true, new: true }
         );
-                createdAt: transactionData.createdAt,
-                completedAt: new Date()
-              }
-            }
-          },
-          { upsert: true, new: true }
-        );
+
         
         transactionData.status = 'SUCCESS';
         console.log('✅ Status check: User upgraded to Pro:', transactionData.email);
