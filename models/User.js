@@ -25,6 +25,7 @@ const userSchema = new mongoose.Schema({
     amount: Number,
     status: { type: String, enum: ['PENDING', 'SUCCESS', 'FAILED'] },
     paymentMethod: { type: String, enum: ['phonepe', 'razorpay'] },
+    planType: { type: String, enum: ['credits', 'subscription', 'lifetime'] },
     createdAt: { type: Date, default: Date.now },
     completedAt: Date
   }],
