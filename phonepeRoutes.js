@@ -150,6 +150,50 @@ router.all('/redirect', async (req, res) => {
     // Redirect to the React app instead of showing HTML
     let redirectUrl;
     if (status === 'SUCCESS') {
+      const tx = pendingTransactions.get(transactionId);
+      if (tx) {
+        try {
+          const planDetails = tx.planDetails;
+          let proExpiresAt;
+          const updateData = {
+            $push: {
+              transactions: {
+                transactionId,
+                amount: tx.amount,
+                status: 'SUCCESS',
+                paymentMethod: 'phonepe',
+                planType: planDetails.type,
+                createdAt: tx.createdAt,
+                completedAt: new Date()
+              }
+            }
+          };
+          switch (planDetails.type) {
+            case 'credits':
+              updateData.$inc = {
+                paidInterviewCredits: planDetails.credits,
+                paidChatCredits: planDetails.credits * 12,
+                paidCredits: planDetails.credits
+              };
+              break;
+            case 'subscription':
+              proExpiresAt = new Date(Date.now() + 5 * 24 * 60 * 60 * 1000);
+              updateData.proExpiresAt = proExpiresAt;
+              updateData.plan = 'pro';
+              updateData.subscriptionType = 'subscription';
+              break;
+          }
+          await User.findOneAndUpdate(
+            { email: tx.email },
+            updateData,
+            { upsert: true, new: true }
+          );
+          tx.status = 'SUCCESS';
+          tx.completedAt = new Date();
+        } catch (e) {
+          console.error('❌ Redirect DB update failed:', e);
+        }
+      }
       redirectUrl = `https://interviewpro-jet.vercel.app/payment-complete?transactionId=${encodeURIComponent(transactionId)}&status=SUCCESS`;
     } else if (status === 'FAILED') {
       redirectUrl = `https://interviewpro-jet.vercel.app/payment-complete?transactionId=${encodeURIComponent(transactionId)}&status=FAILED`;
