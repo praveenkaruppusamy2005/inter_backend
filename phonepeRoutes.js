@@ -16,34 +16,58 @@ const WEBHOOK_PASSWORD = process.env.PHONEPE_CLIENT_SECRET || process.env.PHONEP
 /**
  * Initiate PhonePe Payment
  * POST /phonepe/initiate
- * Body: { email, amount }
+ * Body: { email, amount, type, credits, duration }
  */
 router.post('/initiate', async (req, res) => {
   try {
-
-    const { email, hours = 1 } = req.body;
+    const { email, amount, type = 'credits', credits = 1, duration = 10 } = req.body;
+    
     if (!email) {
       return res.status(400).json({ success: false, error: 'Email required' });
     }
-    // Always use ₹100 per hour
-    const amount = hours * 100;
+
+    let finalAmount;
+    let description;
+    let planDetails = {};
+
+    // Calculate amount and description based on plan type
+    switch (type) {
+      case 'credits':
+        finalAmount = amount || (credits * 250);
+        description = `${credits} Credit${credits > 1 ? 's' : ''} - ₹${finalAmount}`;
+        planDetails = { type: 'credits', credits, amount: finalAmount };
+        break;
+      case 'subscription':
+        finalAmount = 1000; // Fixed price for 10-day subscription
+        description = `10-Day Subscription - ₹${finalAmount}`;
+        planDetails = { type: 'subscription', duration: 10, amount: finalAmount };
+        break;
+      case 'lifetime':
+        finalAmount = 5000; // Fixed price for lifetime
+        description = `Lifetime Access - ₹${finalAmount}`;
+        planDetails = { type: 'lifetime', amount: finalAmount };
+        break;
+      default:
+        return res.status(400).json({ success: false, error: 'Invalid plan type' });
+    }
+
     // Generate unique merchant transaction ID
     const merchantOrderId = randomUUID();
-    const amountInPaise = amount * 100; // Convert rupees to paise
+    const amountInPaise = finalAmount * 100; // Convert rupees to paise
 
-    // Store transaction details with hours
+    // Store transaction details
     pendingTransactions.set(merchantOrderId, {
       email,
-      amount,
-      hours,
+      amount: finalAmount,
+      planDetails,
       createdAt: new Date(),
       status: 'PENDING'
     });
 
-    // Create meta info with user email and hours
+    // Create meta info with user email and plan details
     const metaInfo = MetaInfo.builder()
       .udf1(email)
-      .udf2(`Pro Upgrade - ${hours} ${hours === 1 ? 'Hour' : 'Hours'}`)
+      .udf2(description)
       .build();
 
     // Build payment request using StandardCheckoutPayRequest
@@ -52,15 +76,16 @@ router.post('/initiate', async (req, res) => {
       .merchantOrderId(merchantOrderId)
       .amount(amountInPaise)
       .metaInfo(metaInfo)
-      .redirectUrl(`${backendUrl}phonepe/redirect?transactionId=${merchantOrderId}`) // Use backend redirect which now redirects to React app
+      .redirectUrl(`${backendUrl}/phonepe/redirect?transactionId=${merchantOrderId}`)
       .expireAfter(3600) // 1 hour expiry
-      .message('Pro Plan Upgrade - 1 Hour Access')
+      .message(description)
       .build();
 
     console.log('📤 Initiating PhonePe payment:', {
       merchantOrderId,
       amount: amountInPaise,
-      email
+      email,
+      planDetails
     });
 
     const client = PhonepeClient();
@@ -187,28 +212,52 @@ router.post('/webhook', async (req, res) => {
     if (eventType === 'CHECKOUT_ORDER_COMPLETED' && payload.state === 'COMPLETED') {
       console.log('✅ Payment successful for:', transactionData.email);
 
-      // Calculate Pro expiry based on purchased hours
-      const hours = transactionData.hours || 1;
-      const proExpiresAt = new Date(Date.now() + hours * 60 * 60 * 1000);
-      
-      console.log(`✅ Granting Pro access for ${hours} hour(s), expires at:`, proExpiresAt);
+      const planDetails = transactionData.planDetails;
+      let proExpiresAt;
+      let updateData = {
+        plan: 'pro',
+        $push: {
+          transactions: {
+            transactionId: merchantOrderId,
+            amount: transactionData.amount,
+            status: 'SUCCESS',
+            paymentMethod: 'phonepe',
+            planType: planDetails.type,
+            createdAt: transactionData.createdAt,
+            completedAt: new Date()
+          }
+        }
+      };
+
+      // Calculate Pro expiry based on plan type
+      switch (planDetails.type) {
+        case 'credits':
+          // Credits don't have expiry, just add credits to user account
+          updateData.credits = { $inc: planDetails.credits };
+          console.log(`✅ Adding ${planDetails.credits} credits to user account`);
+          break;
+        case 'subscription':
+          // 10-day subscription
+          proExpiresAt = new Date(Date.now() + 10 * 24 * 60 * 60 * 1000);
+          updateData.proExpiresAt = proExpiresAt;
+          updateData.subscriptionType = 'subscription';
+          console.log(`✅ Granting 10-day subscription, expires at:`, proExpiresAt);
+          break;
+        case 'lifetime':
+          // Lifetime access - set expiry to far future
+          proExpiresAt = new Date(Date.now() + 100 * 365 * 24 * 60 * 60 * 1000); // 100 years
+          updateData.proExpiresAt = proExpiresAt;
+          updateData.subscriptionType = 'lifetime';
+          console.log(`✅ Granting lifetime access`);
+          break;
+        default:
+          console.error('❌ Unknown plan type:', planDetails.type);
+          return res.status(400).json({ success: false, error: 'Unknown plan type' });
+      }
       
       await User.findOneAndUpdate(
         { email: transactionData.email },
-        {
-          plan: 'pro',
-          proExpiresAt: proExpiresAt,
-          $push: {
-            transactions: {
-              transactionId: merchantOrderId,
-              amount: transactionData.amount,
-              status: 'SUCCESS',
-              paymentMethod: 'phonepe',
-              createdAt: transactionData.createdAt,
-              completedAt: new Date()
-            }
-          }
-        },
+        updateData,
         { upsert: true, new: true }
       );
 
@@ -255,21 +304,54 @@ router.get('/status/:transactionId', async (req, res) => {
       const transactionData = pendingTransactions.get(transactionId);
       
       if (transactionData && transactionData.status === 'PENDING') {
-        // Calculate Pro expiry based on purchased hours
-        const hours = transactionData.hours || 1;
-        const proExpiresAt = new Date(Date.now() + hours * 60 * 60 * 1000);
+        const planDetails = transactionData.planDetails;
+        let proExpiresAt;
+        let updateData = {
+          plan: 'pro',
+          $push: {
+            transactions: {
+              transactionId,
+              amount: transactionData.amount,
+              status: 'SUCCESS',
+              paymentMethod: 'phonepe',
+              planType: planDetails.type,
+              createdAt: transactionData.createdAt,
+              completedAt: new Date()
+            }
+          }
+        };
+
+        // Calculate Pro expiry based on plan type
+        switch (planDetails.type) {
+          case 'credits':
+            // Credits don't have expiry, just add credits to user account
+            updateData.credits = { $inc: planDetails.credits };
+            console.log(`✅ Status check: Adding ${planDetails.credits} credits to user account`);
+            break;
+          case 'subscription':
+            // 10-day subscription
+            proExpiresAt = new Date(Date.now() + 10 * 24 * 60 * 60 * 1000);
+            updateData.proExpiresAt = proExpiresAt;
+            updateData.subscriptionType = 'subscription';
+            console.log(`✅ Status check: Granting 10-day subscription, expires at:`, proExpiresAt);
+            break;
+          case 'lifetime':
+            // Lifetime access - set expiry to far future
+            proExpiresAt = new Date(Date.now() + 100 * 365 * 24 * 60 * 60 * 1000); // 100 years
+            updateData.proExpiresAt = proExpiresAt;
+            updateData.subscriptionType = 'lifetime';
+            console.log(`✅ Status check: Granting lifetime access`);
+            break;
+          default:
+            console.error('❌ Unknown plan type:', planDetails.type);
+            return res.status(400).json({ success: false, error: 'Unknown plan type' });
+        }
         
         await User.findOneAndUpdate(
           { email: transactionData.email },
-          { 
-            plan: 'pro', 
-            proExpiresAt,
-            $push: {
-              transactions: {
-                transactionId,
-                amount: transactionData.amount,
-                status: 'SUCCESS',
-                paymentMethod: 'phonepe',
+          updateData,
+          { upsert: true, new: true }
+        );
                 createdAt: transactionData.createdAt,
                 completedAt: new Date()
               }
