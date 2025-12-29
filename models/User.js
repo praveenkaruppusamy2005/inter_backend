@@ -12,7 +12,13 @@ const userSchema = new mongoose.Schema({
   freeCredits: { type: Number, default: 1 }, // Free trial credits (1 credit per user)
   creditsUsed: { type: Number, default: 0 }, // Track credits usage
   lastCreditUsedAt: Date, // When was last credit used
-  paidCredits: { type: Number, default: 0 },
+  // Paid credits
+  paidCredits: { type: Number, default: 0 }, // legacy total credits
+  paidChatCredits: { type: Number, default: 0 },
+  paidInterviewCredits: { type: Number, default: 0 },
+  // Usage counters
+  chatCreditsUsed: { type: Number, default: 0 },
+  interviewCreditsUsed: { type: Number, default: 0 },
   // Payment transaction history
   transactions: [{
     transactionId: String,
