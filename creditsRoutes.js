@@ -11,17 +11,14 @@ router.get('/check/:email', async (req, res) => {
   try {
     const { email } = req.params;
     
-    const user = await User.findOne({ email });
+    let user = await User.findOne({ email });
     
     if (!user) {
-      return res.json({
-        success: true,
-        hasCredits: false,
-        freeCredits: 0,
-        creditsUsed: 0,
-        isPro: false,
-        chatRemaining: 0,
-        interviewRemaining: 0
+      // Auto-provision user with free trial credits
+      user = await User.create({
+        email,
+        freeCredits: 1,
+        creditsUsed: 0
       });
     }
 
