@@ -234,13 +234,13 @@ router.post('/webhook', async (req, res) => {
       // Calculate Pro expiry based on plan type
       switch (planDetails.type) {
         case 'credits':
-          // Treat purchased credits as interview credits, plus 20 chat credits per interview credit
+          // Treat purchased credits as interview credits, plus 12 chat credits per interview credit
           updateData.$inc = { 
             paidInterviewCredits: planDetails.credits, 
-            paidChatCredits: planDetails.credits * 20,
+            paidChatCredits: planDetails.credits * 12,
             paidCredits: planDetails.credits // legacy total for compatibility
           };
-          console.log(`✅ Adding ${planDetails.credits} interview credits and ${planDetails.credits * 20} chat credits`);
+          console.log(`✅ Adding ${planDetails.credits} interview credits and ${planDetails.credits * 12} chat credits`);
           break;
         case 'subscription':
           proExpiresAt = new Date(Date.now() + 5 * 24 * 60 * 60 * 1000);
@@ -333,10 +333,10 @@ router.get('/status/:transactionId', async (req, res) => {
           case 'credits':
             updateData.$inc = { 
               paidInterviewCredits: planDetails.credits, 
-              paidChatCredits: planDetails.credits * 20,
+              paidChatCredits: planDetails.credits * 12,
               paidCredits: planDetails.credits
             };
-            console.log(`✅ Status check: Adding ${planDetails.credits} interview credits and ${planDetails.credits * 20} chat credits`);
+            console.log(`✅ Status check: Adding ${planDetails.credits} interview credits and ${planDetails.credits * 12} chat credits`);
             break;
           case 'subscription':
             proExpiresAt = new Date(Date.now() + 5 * 24 * 60 * 60 * 1000);
