@@ -6,7 +6,11 @@ import { StandardCheckoutClient, Env } from 'pg-sdk-node';
 // Load environment variables from backend/.env
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-dotenv.config({ path: path.join(__dirname, '.env') });
+dotenv.config({ path: path.join(__dirname, '.env'), override: true });
+if (process.resourcesPath) {
+  dotenv.config({ path: path.join(process.resourcesPath, 'backend.env'), override: true });
+  dotenv.config({ path: path.join(process.resourcesPath, 'backend', '.env'), override: true });
+}
 
 let PHONEPE_CLIENT_ID = process.env.PHONEPE_CLIENT_ID;
 let PHONEPE_CLIENT_SECRET = process.env.PHONEPE_CLIENT_SECRET;
