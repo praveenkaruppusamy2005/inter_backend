@@ -8,6 +8,7 @@ const userSchema = new mongoose.Schema({
   plan: { type: String, enum: ['free', 'pro'], default: 'free' },
   proExpiresAt: Date,
   resumePath: String, // Path to the stored resume file
+  chatProvider: { type: String, enum: ['openrouter', 'groq'], default: 'openrouter' },
   // Free credits system
   freeCredits: { type: Number, default: 1 }, // Free trial credits (1 credit per user)
   creditsUsed: { type: Number, default: 0 }, // Track credits usage
@@ -30,6 +31,12 @@ const userSchema = new mongoose.Schema({
   }],
   createdAt: { type: Date, default: Date.now },
   updatedAt: { type: Date, default: Date.now }
+  ,
+  customApiKeys: {
+    openRouter: { type: String, default: "" },
+    deepgram: { type: String, default: "" },
+    groq: { type: String, default: "" }
+  }
 });
 
 // Update timestamp on save
