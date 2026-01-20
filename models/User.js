@@ -2,6 +2,7 @@ import mongoose from 'mongoose';
 
 const userSchema = new mongoose.Schema({
   email: { type: String, required: true, unique: true },
+  password: String, // For email/password authentication
   name: String,
   photo: String,
   googleId: String,

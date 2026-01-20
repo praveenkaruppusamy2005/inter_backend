@@ -46,6 +46,14 @@ try {
   console.error("⚠️ Credits routes not mounted:", err?.message || err);
 }
 
+try {
+  const { default: authRoutes } = await import("./authRoutes.js");
+  apiApp.use("/auth", authRoutes);
+  console.log("✅ Auth routes mounted");
+} catch (err) {
+  console.error("⚠️ Auth routes not mounted:", err?.message || err);
+}
+
 // Connect to MongoDB with error handling
 let dbConnected = false;
 try {
@@ -76,10 +84,6 @@ apiApp.get('/test', (req, res) => {
     url: req.url
   });
 });
-
-// PhonePe routes
-
-// Credits routes
 
 // Health check endpoint
 apiApp.get('/health', (req, res) => {
@@ -132,5 +136,7 @@ apiApp.listen(PORT, () => {
   console.log("   GET  /phonepe/status/:transactionId");
   console.log("   GET  /credits/check/:email");
   console.log("   POST /credits/use");
+  console.log("   POST /auth/register");
+  console.log("   POST /auth/login");
   console.log("   GET  /health");
 });

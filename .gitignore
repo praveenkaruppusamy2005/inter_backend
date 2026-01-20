@@ -42,7 +42,7 @@ jspm_packages/
 .yarn-integrity
 
 # dotenv environment variables file (keep .env for production secrets)
-# .env
+.env
 
 # Deployment files (not needed for GitHub deployment)
 azure-deployment.zip
