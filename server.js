@@ -29,6 +29,17 @@ apiApp.use((err, req, res, next) => {
 apiApp.use(express.json());
 apiApp.use(express.urlencoded({ extended: true }));
 
+// Add CORS headers for Electron app
+apiApp.use((req, res, next) => {
+  res.header('Access-Control-Allow-Origin', '*');
+  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+  if (req.method === 'OPTIONS') {
+    return res.sendStatus(200);
+  }
+  next();
+});
+
 // Lazily load and mount routes to avoid startup failure if deps missing
 try {
   const { default: phonepeRoutes } = await import("./phonepeRoutes.js");
