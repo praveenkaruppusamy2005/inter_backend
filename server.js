@@ -139,4 +139,19 @@ apiApp.listen(PORT, () => {
   console.log("   POST /auth/register");
   console.log("   POST /auth/login");
   console.log("   GET  /health");
+  
+  // Keep-alive mechanism for Render free tier
+  if (process.env.NODE_ENV === 'production' || process.env.RENDER) {
+    console.log('🏓 Starting keep-alive pinger...');
+    setInterval(async () => {
+      try {
+        const response = await fetch(`${process.env.BACKEND_URL || 'https://inter-backend-lpmb.onrender.com'}/health`);
+        if (response.ok) {
+          console.log('✅ Keep-alive ping successful');
+        }
+      } catch (error) {
+        console.error('❌ Keep-alive ping failed:', error.message);
+      }
+    }, 10 * 60 * 1000); // Ping every 10 minutes
+  }
 });
